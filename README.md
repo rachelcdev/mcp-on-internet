@@ -1,2 +1,2 @@
-# mcp-on-internet-
+# mcp-on-internet
 sample mcp
