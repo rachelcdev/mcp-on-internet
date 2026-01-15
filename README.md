@@ -1,60 +1,76 @@
-# Agent on Internet: Simple MCP Server
+# Building a Remote MCP Server on Cloudflare (Without Auth)
 
-We have successfully created and deployed a simple Model Context Protocol (MCP) server to Cloudflare Workers. This server implements basic arithmetic tools (`add`, `subtract`) and uses the SSE (Server-Sent Events) transport layer.
+This example allows you to deploy a remote MCP server that doesn't require authentication on Cloudflare Workers. 
 
 ## Project Structure
+Contains the Cloudflare Worker source code
+  - `src/index.ts`: Main worker logic implementing MCP protocol over HTTP/SSE
+  - `package.json`: Dependencies (`@modelcontextprotocol/sdk`, `zod`, `wrangler`)
+  - `wrangler.json`: Cloudflare configuration
 
-- **simple-mcp-worker/**: Contains the Cloudflare Worker source code.
-  - `src/index.ts`: Main worker logic implementing MCP protocol over HTTP/SSE.
-  - `package.json`: Dependencies (`@modelcontextprotocol/sdk`, `zod`, `wrangler`).
-  - `wrangler.json`: Cloudflare configuration.
+## Running Locally
 
-## Accomplishments
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-1.  **Manual SSE Transport Implementation**:
-    - Implemented a custom SSE endpoint (`/sse`) and message handler (`/messages`) in `src/index.ts` to support MCP over HTTP on Cloudflare Workers (since standard SDK defaults to stdio).
-    - **Key Fixes**:
-        - **Absolute URLs**: Ensure the server returns absolute URLs (e.g., `https://.../messages`) in SSE events so external clients can connect.
-        - **Keep-Alive**: Added a 10-second heartbeat to the SSE stream to prevent Cloudflare from timing out the connection.
+2. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+   This will start the server at `http://localhost:8787`
 
-2.  **Deployment**:
-    - Deployed to Cloudflare Workers at: `https://simple-mcp-worker.ruicao-mcp-test.workers.dev`
+3. **Test with MCP Inspector:**
+   ```bash
+   npx @modelcontextprotocol/inspector http://localhost:8787/sse
+   ```
+Note: Open another terminal and ensure to use the `SSE` transport for local development. URL should be `http://localhost:8787/sse`.
 
-## Usage Guide
+Click `Connect` to connect to your local server. You should see the tools become available.
 
-### 1. Verification with Script
-We created a verification script `test-tools.ts` to programmatically test the server:
+## Deployment
+
 ```bash
-cd simple-mcp-worker
-npx tsx test-tools.ts
+npm run deploy
+```
+Your server will be deployed to: `https://remote-mcp-server-authless.<your-account>.workers.dev`
+
+## Usage
+
+### 1. Verify with MCP Inspector
+
+Test your deployed server:
+```bash
+npx @modelcontextprotocol/inspector --transport sse --server-url https://remote-mcp-server-authless.<your-account>.workers.dev/sse
 ```
 
-### 2. Verification with MCP Inspector
-You can use the official MCP Inspector to test the live server:
-```bash
-npx @modelcontextprotocol/inspector --transport sse --server-url https://simple-mcp-worker.ruicao-mcp-test.workers.dev/sse
-```
+### 2. Connect to Cloudflare AI Playground
 
-### 3. Usage with Claude Desktop
-To use this server with Claude Desktop, configure your `claude_desktop_config.json`:
+1. Go to https://playground.ai.cloudflare.com/
+2. Enter your deployed MCP server URL (`remote-mcp-server-authless.<your-account>.workers.dev/sse`)
+3. Use your MCP tools directly from the playground!
+
+### 3. Connect to Claude Desktop
+
+You can also connect to your remote MCP server from local MCP clients, by using the [mcp-remote proxy](https://www.npmjs.com/package/mcp-remote). 
+
+To connect to your MCP server from Claude Desktop, follow [Anthropic's Quickstart](https://modelcontextprotocol.io/quickstart/user) and within Claude Desktop go to Settings > Developer > Edit Config.
+
+Update with this configuration:
+
 ```json
 {
   "mcpServers": {
-    "my-worker": {
+    "calculator": {
       "command": "npx",
       "args": [
-        "-y",
-        "@modelcontextprotocol/inspector",
-        "--transport", "sse",
-        "--server-url", "https://simple-mcp-worker.ruicao-mcp-test.workers.dev/sse"
+        "mcp-remote",
+        "http://localhost:8787/sse"  // or remote-mcp-server-authless.your-account.workers.dev/sse
       ]
     }
   }
 }
 ```
 
-## Next Steps
-
-- Expand the toolset in `src/index.ts`.
-- Implement authentication for the endpoints.
-- Connect to real data sources (D1, KV, external APIs).
+Restart Claude and you should see the tools become available. 
